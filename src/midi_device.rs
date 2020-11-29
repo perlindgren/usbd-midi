@@ -7,7 +7,7 @@ use usb_device::Result;
 const MIDI_OUT_SIZE: u8 = 0x09;
 
 /// Note we are using MidiIn/out here to refer to the fact that
-/// the host sees it as a midi in/out respectively 
+/// the host sees it as a midi in/out respectively
 /// This class allows you to send and receive midi event packages
 /// (Transfer endpoints not supported)
 
@@ -46,7 +46,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
         // A single AudioControl (AC) interface can serve several audio and midi streams
         // which together forms an Audio Interface Collection (AIC)
 
-        // MIDI Data is transferred over the USB in 32-bit USB-MIDI Event Packets, 
+        // MIDI Data is transferred over the USB in 32-bit USB-MIDI Event Packets,
         // with the first 4 bits used to designate the appropriate Embedded MIDI Jack.
 
         writer.interface(
@@ -57,15 +57,18 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
         )?;
 
         // AUDIO CONTROL EXTRA INFO
+        // USB Device Class Definition for MIDI Devices, Section B.3.2
         writer.write(
             CS_INTERFACE,
             &[
                 HEADER_SUBTYPE,
-                0x00,
-                0x01, // REVISION
-                0x09, // Total Size
-                0x00, // SIZE of class specific descriptions
-                0x01, //Number of streaming interfaces
+                // Revision of class specification - 1.0, 0x0100
+                0x00, // Lsb
+                0x01, // Msb
+                // Total Size, 0x0009
+                0x09, // Lsb
+                0x00, // Msb
+                0x01, // Number of streaming interfaces
                 0x01, // MIDIStreaming interface 1 belongs to this AC interface
             ],
         )?;
