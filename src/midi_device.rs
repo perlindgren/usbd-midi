@@ -3,9 +3,6 @@ use crate::data::usb_midi::usb_midi_event_packet::UsbMidiEventPacket;
 use usb_device::class_prelude::*;
 use usb_device::Result;
 
-//const MIDI_IN_SIZE: u8 = 0x06;
-const MIDI_OUT_SIZE: u8 = 0x09;
-
 /// Note we are using MidiIn/out here to refer to the fact that
 /// the host sees it as a midi in/out respectively
 /// This class allows you to send and receive midi event packages
@@ -14,8 +11,8 @@ const MIDI_OUT_SIZE: u8 = 0x09;
 pub struct MidiClass<'a, B: UsbBus> {
     standard_ac: InterfaceNumber,
     standard_mc: InterfaceNumber,
-    standard_bulkout: EndpointOut<'a, B>,
-    standard_bulkin: EndpointIn<'a, B>,
+    standard_bulkin: EndpointIn<'a, B>,   // in, send to host
+    standard_bulkout: EndpointOut<'a, B>, // out, receive from host
 }
 
 impl<B: UsbBus> MidiClass<'_, B> {
@@ -68,19 +65,20 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 // Total Size, 0x0009
                 0x09, // Lsb
                 0x00, // Msb
-                0x01, // Number of streaming interfaces
+                0x02, // Number of streaming interfaces
                 0x01, // MIDIStreaming interface 1 belongs to this AC interface
             ],
         )?;
 
         // Streaming Standard
+        // USB Device Class Definition for MIDI Devices, Section B.4.1
 
         writer.interface(
             self.standard_mc,
             USB_AUDIO_CLASS,
             USB_MIDISTREAMING_SUBCLASS,
             0, //no protocol
-        )?; //Num endpoints?
+        )?;
 
         // Streaming extra info
 
@@ -88,50 +86,45 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             CS_INTERFACE,
             &[
                 MS_HEADER_SUBTYPE,
-                0x00,
-                0x01, //REVISION
-                (0x07 + MIDI_OUT_SIZE),
-                0x00, //Total size of class specific descriptors? (little endian?)
+                // Revision of class specification - 1.0, 0x0100
+                0x00, // Lsb
+                0x01, // Msb
+                // Total Size
+                (0x07 + MIDI_OUT_SIZE + MIDI_IN_SIZE), // Lsb
+                0x00,                                  // Msb
             ],
         )?;
 
-        //JACKS
+        // JACKS
 
-        /*         writer.write(
-            CS_INTERFACE,
-            &[
-                MIDI_IN_JACK_SUBTYPE,
-                EMBEDDED,
-                0x01, // id
-                0x00
-            ]
-        )?; */
-
+        // Midi out from the device to Midi in on the host
+        const MIDI_OUT_SIZE: u8 = 0x09;
         writer.write(
             CS_INTERFACE,
             &[
-                MIDI_OUT_JACK_SUBTYPE,
-                EMBEDDED,
-                0x01, //id
-                0x01, // 1 pin
-                0x01, // pin 1
-                0x01, //sorta vague source pin?
+                MIDI_OUT_JACK_SUBTYPE, // bDescriptorSubtype
+                EMBEDDED,              // bJackType
+                0x01,                  // bJackID, 1
+                0x01,                  // bNrInputPins, 1
+                0x01,                  // BaSourceID, 1
+                0x01,                  // BaSourcePin, 1
                 0x00,
             ],
         )?;
-
-        /*         writer.endpoint(&self.standard_bulkout)?;
-
-        writer.write(
-            CS_ENDPOINT,
-            &[
-                MS_GENERAL,
-                0x01,
-                0x01
-            ]
-        )?; */
-
         writer.endpoint(&self.standard_bulkin)?;
+
+        // Midi in to the device from Midi out on the host
+        const MIDI_IN_SIZE: u8 = 0x06;
+        writer.write(
+            CS_INTERFACE,
+            &[
+                MIDI_IN_JACK_SUBTYPE, // bDescriptorSubtype
+                EMBEDDED,             // bJackType
+                0x02,                 // bJackID, 2
+                0x00,                 // unused
+            ],
+        )?;
+        writer.endpoint(&self.standard_bulkout)?;
 
         writer.write(CS_ENDPOINT, &[MS_GENERAL, 0x01, 0x01])?;
         Ok(())
