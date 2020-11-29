@@ -97,6 +97,18 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
 
         // JACKS
 
+        // Midi in to the device from Midi out on the host
+        const MIDI_IN_SIZE: u8 = 0x06;
+        writer.write(
+            CS_INTERFACE,
+            &[
+                MIDI_IN_JACK_SUBTYPE, // bDescriptorSubtype
+                EMBEDDED,             // bJackType
+                0x02,                 // bJackID, 2
+                0x00,                 // unused
+            ],
+        )?;
+
         // Midi out from the device to Midi in on the host
         const MIDI_OUT_SIZE: u8 = 0x09;
         writer.write(
@@ -111,19 +123,8 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 0x00,
             ],
         )?;
-        writer.endpoint(&self.standard_bulkin)?;
 
-        // Midi in to the device from Midi out on the host
-        const MIDI_IN_SIZE: u8 = 0x06;
-        writer.write(
-            CS_INTERFACE,
-            &[
-                MIDI_IN_JACK_SUBTYPE, // bDescriptorSubtype
-                EMBEDDED,             // bJackType
-                0x02,                 // bJackID, 2
-                0x00,                 // unused
-            ],
-        )?;
+        writer.endpoint(&self.standard_bulkin)?;
         writer.endpoint(&self.standard_bulkout)?;
 
         writer.write(CS_ENDPOINT, &[MS_GENERAL, 0x01, 0x01])?;
