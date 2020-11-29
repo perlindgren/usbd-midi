@@ -65,7 +65,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 // Total Size, 0x0009
                 0x09, // Lsb
                 0x00, // Msb
-                0x02, // Number of streaming interfaces
+                0x01, // Number of streaming interfaces
                 0x01, // MIDIStreaming interface 1 belongs to this AC interface
             ],
         )?;
