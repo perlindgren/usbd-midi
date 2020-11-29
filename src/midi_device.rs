@@ -21,8 +21,8 @@ impl<B: UsbBus> MidiClass<'_, B> {
         MidiClass {
             standard_ac: alloc.interface(),
             standard_mc: alloc.interface(),
-            standard_bulkout: alloc.bulk(64),
             standard_bulkin: alloc.bulk(64),
+            standard_bulkout: alloc.bulk(64),
         }
     }
 
@@ -90,24 +90,12 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 0x00, // Lsb
                 0x01, // Msb
                 // Total Size
-                (0x07 + MIDI_OUT_SIZE + MIDI_IN_SIZE), // Lsb
-                0x00,                                  // Msb
+                (0x07 + MIDI_OUT_SIZE + MIDI_IN_SIZE + 2 * (EP_SIZE + EP_SIZE)), // Lsb
+                0x00,                                                            // Msb
             ],
         )?;
 
         // JACKS
-
-        // Midi in to the device from Midi out on the host
-        const MIDI_IN_SIZE: u8 = 0x06;
-        writer.write(
-            CS_INTERFACE,
-            &[
-                MIDI_IN_JACK_SUBTYPE, // bDescriptorSubtype
-                EMBEDDED,             // bJackType
-                0x01,                 // bJackID, 1
-                0x00,                 // unused
-            ],
-        )?;
 
         // Midi out from the device to Midi in on the host
         const MIDI_OUT_SIZE: u8 = 0x09;
@@ -116,7 +104,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             &[
                 MIDI_OUT_JACK_SUBTYPE, // bDescriptorSubtype
                 EMBEDDED,              // bJackType
-                0x02,                  // bJackID, 2
+                0x01,                  // bJackID, 1
                 0x01,                  // bNrInputPins, 1
                 0x01,                  // BaSourceID, 1
                 0x01,                  // BaSourcePin, 1
@@ -124,10 +112,25 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             ],
         )?;
 
+        // Midi in to the device from Midi out on the host
+        const MIDI_IN_SIZE: u8 = 0x06;
+        writer.write(
+            CS_INTERFACE,
+            &[
+                MIDI_IN_JACK_SUBTYPE, // bDescriptorSubtype
+                EMBEDDED,             // bJackType
+                0x02,                 // bJackID, 2
+                0x00,                 // unused
+            ],
+        )?;
+        const EP_SIZE: u8 = 0x09;
         writer.endpoint(&self.standard_bulkin)?;
-        writer.endpoint(&self.standard_bulkout)?;
+        const EP_CLASS_SIZE: u8 = 0x05;
 
         writer.write(CS_ENDPOINT, &[MS_GENERAL, 0x01, 0x01])?;
+        writer.endpoint(&self.standard_bulkout)?;
+        writer.write(CS_ENDPOINT, &[MS_GENERAL, 0x01, 0x01])?;
+
         Ok(())
     }
 }
