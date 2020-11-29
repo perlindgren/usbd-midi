@@ -82,6 +82,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
 
         // Streaming extra info
 
+        const CS_INTERFACE_SIZE: u8 = 0x07;
         writer.write(
             CS_INTERFACE,
             &[
@@ -89,15 +90,16 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 // Revision of class specification - 1.0, 0x0100
                 0x00, // Lsb
                 0x01, // Msb
-                // Total Size
-                (0x07 + MIDI_OUT_SIZE + MIDI_IN_SIZE + 2 * (EP_SIZE + EP_SIZE)), // Lsb
-                0x00,                                                            // Msb
+                // Total size of class-specific descriptors (including endpoints)
+                CS_INTERFACE_SIZE + MIDI_OUT_SIZE + MIDI_IN_SIZE + 2 * (EP_SIZE + EP_CLASS_SIZE), // Lsb
+                0x00, // Msb (assumes extra info fits in one byte)
             ],
         )?;
 
         // JACKS
 
         // Midi out from the device to Midi in on the host
+        // Note: The roles of BaSourceID and BaSourcePin in a bit unclear
         const MIDI_OUT_SIZE: u8 = 0x09;
         writer.write(
             CS_INTERFACE,
@@ -106,8 +108,8 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 EMBEDDED,              // bJackType
                 0x01,                  // bJackID, 1
                 0x01,                  // bNrInputPins, 1
-                0x01,                  // BaSourceID, 1
-                0x01,                  // BaSourcePin, 1
+                0x01,                  // BaSourceID, 1?
+                0x01,                  // BaSourcePin, 1?
                 0x00,
             ],
         )?;
@@ -123,11 +125,15 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
                 0x00,                 // unused
             ],
         )?;
+
+        // Bulkin endpoint
         const EP_SIZE: u8 = 0x09;
         writer.endpoint(&self.standard_bulkin)?;
-        const EP_CLASS_SIZE: u8 = 0x05;
 
+        const EP_CLASS_SIZE: u8 = 0x05;
         writer.write(CS_ENDPOINT, &[MS_GENERAL, 0x01, 0x01])?;
+
+        // Bulkin endpoint
         writer.endpoint(&self.standard_bulkout)?;
         writer.write(CS_ENDPOINT, &[MS_GENERAL, 0x01, 0x01])?;
 
