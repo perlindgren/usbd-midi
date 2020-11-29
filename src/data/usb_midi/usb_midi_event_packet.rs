@@ -8,6 +8,15 @@ use crate::data::midi::message::raw::{Payload,Raw};
 /// A packet that communicates with the host
 /// Currently supported is sending the specified normal midi
 /// message over the supplied cable number
+///
+/// Each Midi event is 32 bits
+/// Byte 0         | Byte 1 | Byte 2 | Byte 3
+/// -----------------------------------------
+/// Cable  | Code  | MIDI_0 | MIDI_1 | MIDI_2
+/// Number | Index |        |        |
+///
+/// See USB Device Class Definition for MIDI Devices, Section 4
+///
 pub struct UsbMidiEventPacket {
     pub cable_number : CableNumber,
     pub message: Message
@@ -22,6 +31,7 @@ impl From<UsbMidiEventPacket> for [u8;4] {
                         CodeIndexNumber::find_from_message(&message);
                 U4::from(code_index)
         };
+        // Byte 0
         let header = U4::combine(cable_number,index_number);
 
         let raw_midi = Raw::from(message);

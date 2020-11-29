@@ -6,9 +6,11 @@ use usb_device::Result;
 //const MIDI_IN_SIZE: u8 = 0x06;
 const MIDI_OUT_SIZE: u8 = 0x09;
 
-///Note we are using MidiIn here to refer to the fact that
-///The Host sees it as a midi in device
-///This class allows you to send data in
+/// Note we are using MidiIn/out here to refer to the fact that
+/// the host sees it as a midi in/out respectively 
+/// This class allows you to send and receive midi event packages
+/// (Transfer endpoints not supported)
+
 pub struct MidiClass<'a, B: UsbBus> {
     standard_ac: InterfaceNumber,
     standard_mc: InterfaceNumber,
@@ -31,11 +33,21 @@ impl<B: UsbBus> MidiClass<'_, B> {
         let bytes: [u8; 4] = usb_midi.into();
         self.standard_bulkin.write(&bytes)
     }
+
+    pub fn get_message_raw(&mut self, bytes: &mut [u8]) -> Result<usize> {
+        self.standard_bulkout.read(bytes)
+    }
 }
 
 impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
     fn get_configuration_descriptors(&self, writer: &mut DescriptorWriter) -> Result<()> {
         // AUDIO CONTROL STANDARD
+
+        // A single AudioControl (AC) interface can serve several audio and midi streams
+        // which together forms an Audio Interface Collection (AIC)
+
+        // MIDI Data is transferred over the USB in 32-bit USB-MIDI Event Packets, 
+        // with the first 4 bits used to designate the appropriate Embedded MIDI Jack.
 
         writer.interface(
             self.standard_ac,
@@ -58,7 +70,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             ],
         )?;
 
-        //Streaming Standard
+        // Streaming Standard
 
         writer.interface(
             self.standard_mc,
@@ -67,7 +79,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             0, //no protocol
         )?; //Num endpoints?
 
-        //Streaming extra info
+        // Streaming extra info
 
         writer.write(
             CS_INTERFACE,
