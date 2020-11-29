@@ -104,7 +104,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             &[
                 MIDI_IN_JACK_SUBTYPE, // bDescriptorSubtype
                 EMBEDDED,             // bJackType
-                0x02,                 // bJackID, 2
+                0x01,                 // bJackID, 1
                 0x00,                 // unused
             ],
         )?;
@@ -116,7 +116,7 @@ impl<B: UsbBus> UsbClass<B> for MidiClass<'_, B> {
             &[
                 MIDI_OUT_JACK_SUBTYPE, // bDescriptorSubtype
                 EMBEDDED,              // bJackType
-                0x01,                  // bJackID, 1
+                0x02,                  // bJackID, 2
                 0x01,                  // bNrInputPins, 1
                 0x01,                  // BaSourceID, 1
                 0x01,                  // BaSourcePin, 1
