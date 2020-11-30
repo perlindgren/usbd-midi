@@ -9,6 +9,7 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+either = "1.6.1"
 embedded-hal = "0.2.4"
 nb = "1.0.0"
 usb-device = "0.2.7"

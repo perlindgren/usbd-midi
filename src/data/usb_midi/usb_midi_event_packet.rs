@@ -3,7 +3,7 @@ use crate::data::midi::message::raw::{Payload, Raw};
 use crate::data::midi::message::Message;
 use crate::data::usb_midi::cable_number::CableNumber;
 use crate::data::usb_midi::code_index_number::CodeIndexNumber;
-
+use core::convert::TryFrom;
 /// A packet that communicates with the host
 /// Currently supported is sending the specified normal midi
 /// message over the supplied cable number
@@ -40,6 +40,22 @@ impl From<UsbMidiEventPacket> for [u8; 4] {
             Payload::SingleByte(byte) => [header, status, byte.into(), 0],
             Payload::DoubleByte(byte1, byte2) => [header, status, byte1.into(), byte2.into()],
         }
+    }
+}
+
+// /// Error representing an illegal UsbMidiEventPacket
+//
+pub struct InvalidUsbMidiEventPacket;
+
+impl TryFrom<[u8; 4]> for UsbMidiEventPacket {
+    type Error = InvalidUsbMidiEventPacket;
+    fn try_from(value: [u8; 4]) -> Result<Self, Self::Error> {
+        let (cable_number, index_number) = U4::split(value[0]);
+        // Ok(UsbMidiEventPacket {
+        //     cable_number,
+        //     message,
+        // })
+        Err(InvalidUsbMidiEventPacket)
     }
 }
 

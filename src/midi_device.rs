@@ -1,7 +1,9 @@
 use crate::data::usb::constants::*;
-use crate::data::usb_midi::usb_midi_event_packet::UsbMidiEventPacket;
+use crate::data::usb_midi::usb_midi_event_packet::*;
+use core::convert::TryFrom;
+use either::Either;
 use usb_device::class_prelude::*;
-use usb_device::Result;
+use usb_device::{Result, UsbError};
 
 /// Note we are using MidiIn/out here to refer to the fact that
 /// the host sees it as a midi in/out respectively
@@ -33,6 +35,17 @@ impl<B: UsbBus> MidiClass<'_, B> {
 
     pub fn get_message_raw(&mut self, bytes: &mut [u8]) -> Result<usize> {
         self.standard_bulkout.read(bytes)
+    }
+
+    /// get a midi message from the provide UsbBus
+    pub fn get_message(
+        &mut self,
+    ) -> core::result::Result<UsbMidiEventPacket, Either<UsbError, InvalidUsbMidiEventPacket>> {
+        let mut bytes: [u8; 4] = [0; 4];
+        self.get_message_raw(&mut bytes)
+            .map_err(|err| Either::Left(err))?;
+
+        UsbMidiEventPacket::try_from(bytes).map_err(|err| Either::Right(err))
     }
 }
 
